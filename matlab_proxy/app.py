@@ -891,7 +891,7 @@ async def cleanup_background_tasks(app):
     state = app["state"]
     state.clean_up_mwi_server_session()
 
-    await state.stop_matlab(force_quit=True)
+    await state.stop_matlab()
 
     # Cleanup server tasks
     server_tasks = state.server_tasks
