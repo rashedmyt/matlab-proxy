@@ -940,30 +940,15 @@ class AppState:
         """
         matlab_env = os.environ.copy()
 
-        # Env setup related to licensing
-        # No additional env setup required if licensing type is set to existing_license
-        if self.licensing["type"] == "mhlm":
-            try:
-                # Request an access token
-                access_token_data = await mw.fetch_access_token(
-                    self.settings["mwa_api_endpoint"],
-                    self.licensing["identity_token"],
-                    self.licensing["source_id"],
-                )
-                matlab_env["MLM_WEB_LICENSE"] = "true"
-                matlab_env["MLM_WEB_USER_CRED"] = access_token_data["token"]
-                matlab_env["MLM_WEB_ID"] = self.licensing["entitlement_id"]
-
-                matlab_env["MHLM_CONTEXT"] = (
-                    "MATLAB_JAVASCRIPT_DESKTOP"
-                    if os.getenv(mwi_env.get_env_name_mhlm_context()) is None
-                    else os.getenv(mwi_env.get_env_name_mhlm_context())
-                )
-            except OnlineLicensingError as e:
-                raise e
-
-        elif self.licensing["type"] == "nlm":
-            matlab_env["MLM_LICENSE_FILE"] = self.licensing["conn_str"]
+        # Remove MLM_LICENSE_FILE unconditionally before applying licensing env vars.
+        # This must happen regardless of licensing type because MLM_LICENSE_FILE has
+        # higher precedence than other licensing options in MATLAB. If it's inherited
+        # from the user's system environment, it would override the intended licensing
+        # configuration on restart. When NLM licensing env variable is set,
+        # __get_licensing_env_vars will re-set it to the correct connection string.
+        matlab_env.pop("MLM_LICENSE_FILE", None)
+        licensing_env = await self.__get_licensing_env_vars()
+        matlab_env.update(licensing_env)
 
         # Env setup related to MATLAB
         ## Update the values only if it does not already exist in the environment
@@ -1041,6 +1026,44 @@ class AppState:
         # matlab_env["CONNECTOR_WARMUP"] = "true"
 
         return matlab_env
+
+    async def __get_licensing_env_vars(self) -> dict:
+        """Compute licensing-related environment variables for MATLAB startup.
+
+        Based on the current licensing configuration (self.licensing), returns
+        the appropriate environment variables:
+        - "mhlm": fetches an access token and sets MLM_WEB_LICENSE, MLM_WEB_USER_CRED,
+          MLM_WEB_ID, and MHLM_CONTEXT.
+        - "nlm": sets MLM_LICENSE_FILE to the NLM connection string.
+        - "existing_license": returns an empty dict (no additional env vars needed).
+
+        Returns:
+            dict: Environment variable names mapped to their values.
+
+        Raises:
+            OnlineLicensingError: If fetching the access token for mhlm licensing fails.
+        """
+        licensing_env = {}
+
+        if self.licensing["type"] == "mhlm":
+            access_token_data = await mw.fetch_access_token(
+                self.settings["mwa_api_endpoint"],
+                self.licensing["identity_token"],
+                self.licensing["source_id"],
+            )
+            licensing_env["MLM_WEB_LICENSE"] = "true"
+            licensing_env["MLM_WEB_USER_CRED"] = access_token_data["token"]
+            licensing_env["MLM_WEB_ID"] = self.licensing["entitlement_id"]
+            licensing_env["MHLM_CONTEXT"] = (
+                "MATLAB_JAVASCRIPT_DESKTOP"
+                if os.getenv(mwi_env.get_env_name_mhlm_context()) is None
+                else os.getenv(mwi_env.get_env_name_mhlm_context())
+            )
+
+        elif self.licensing["type"] == "nlm":
+            licensing_env["MLM_LICENSE_FILE"] = self.licensing["conn_str"]
+
+        return licensing_env
 
     def __filter_env_variables(env_vars: dict, prefix: str) -> dict:
         """Removes the keys that starts with the prefix supplied to this function
@@ -1134,10 +1157,22 @@ class AppState:
             (asyncio.subprocess.Process | psutil.Process): If process creation is successful, else return None.
         """
         # If there's no matlab_cmd available, it means that MATLAB is not available on system PATH.
-        if not self.settings["matlab_cmd"]:
+        raw_cmd = self.settings.get("matlab_cmd")
+        if not raw_cmd:
             raise MatlabInstallError(
                 "Unable to find MATLAB on the system PATH. Add MATLAB to the system PATH, and restart matlab-proxy."
             )
+        # Reason for using copy: To not overwrite the existing matlab_cmd.
+        # Edge Case this solves: License using MLM -> Unlicense -> License using OL --> previous flags (licmode & file) still stays in matlab cmd.
+        matlab_cmd = raw_cmd.copy()
+        # Add license mode arguments based on the presence of MLM_LICENSE_FILE in environment
+        if "MLM_LICENSE_FILE" in matlab_env:
+            matlab_cmd.append("-licmode")
+            if mwi_env.Experimental.get_licmode_override():
+                matlab_cmd.append(mwi_env.Experimental.get_licmode_override())
+                logger.info(f"Using MATLAB license mode arguments: {matlab_cmd}")
+            else:
+                matlab_cmd.append("file")
 
         if system.is_posix():
             import pty
@@ -1146,7 +1181,7 @@ class AppState:
 
             # In POSIX systems, the 'matlab' variable is of type asyncio.subprocess.Process()
             matlab = await asyncio.create_subprocess_exec(
-                *self.settings["matlab_cmd"],
+                *matlab_cmd,
                 env=matlab_env,
                 stdin=slave,
                 stderr=asyncio.subprocess.PIPE,
@@ -1157,9 +1192,7 @@ class AppState:
         else:
             try:
                 # In WINDOWS systems, the 'matlab' variable is of type psutil.Process()
-                matlab = await windows.start_matlab(
-                    self.settings["matlab_cmd"], matlab_env
-                )
+                matlab = await windows.start_matlab(matlab_cmd, matlab_env)
 
                 return matlab
 

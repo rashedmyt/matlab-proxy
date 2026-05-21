@@ -17,6 +17,7 @@ from matlab_proxy.util.mwi.exceptions import (
     LicensingError,
     MatlabError,
     MatlabInstallError,
+    OnlineLicensingError,
 )
 from tests.unit.test_constants import CHECK_MATLAB_STATUS_INTERVAL, FIVE_MAX_TRIES
 from tests.unit.util import MockResponse
@@ -1182,3 +1183,80 @@ async def test_update_matlab_state_switches_to_busy_endpoint(
 
     # Assert
     assert mocked_busy_status_endpoint_function.call_count > 1
+
+
+async def test_get_licensing_env_vars_mhlm(app_state_fixture, mocker):
+    """Test that mhlm licensing returns correct env vars after fetching access token."""
+    # Arrange
+    app_state_fixture.licensing = {
+        "type": "mhlm",
+        "identity_token": "test_token",
+        "source_id": "test_source",
+        "entitlement_id": "test_entitlement",
+    }
+    app_state_fixture.settings["mwa_api_endpoint"] = "http://fake-api"
+
+    mock_fetch = mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_access_token",
+        new_callable=AsyncMock,
+        return_value={"token": "access_token_value"},
+    )
+
+    # Act
+    result = await app_state_fixture._AppState__get_licensing_env_vars()
+
+    # Assert
+    mock_fetch.assert_called_once_with("http://fake-api", "test_token", "test_source")
+    assert result["MLM_WEB_LICENSE"] == "true"
+    assert result["MLM_WEB_USER_CRED"] == "access_token_value"
+    assert result["MLM_WEB_ID"] == "test_entitlement"
+    assert "MHLM_CONTEXT" in result
+
+
+async def test_get_licensing_env_vars_mhlm_raises_on_error(app_state_fixture, mocker):
+    """Test that OnlineLicensingError propagates from mhlm licensing path."""
+    # Arrange
+    app_state_fixture.licensing = {
+        "type": "mhlm",
+        "identity_token": "test_token",
+        "source_id": "test_source",
+        "entitlement_id": "test_entitlement",
+    }
+    app_state_fixture.settings["mwa_api_endpoint"] = "http://fake-api"
+
+    mocker.patch(
+        "matlab_proxy.app_state.mw.fetch_access_token",
+        new_callable=AsyncMock,
+        side_effect=OnlineLicensingError("token fetch failed"),
+    )
+
+    # Act & Assert
+    with pytest.raises(OnlineLicensingError):
+        await app_state_fixture._AppState__get_licensing_env_vars()
+
+
+async def test_get_licensing_env_vars_nlm(app_state_fixture):
+    """Test that nlm licensing returns MLM_LICENSE_FILE with connection string."""
+    # Arrange
+    app_state_fixture.licensing = {
+        "type": "nlm",
+        "conn_str": "27000@license-server",
+    }
+
+    # Act
+    result = await app_state_fixture._AppState__get_licensing_env_vars()
+
+    # Assert
+    assert result == {"MLM_LICENSE_FILE": "27000@license-server"}
+
+
+async def test_get_licensing_env_vars_existing_license(app_state_fixture):
+    """Test that existing_license returns an empty dict."""
+    # Arrange
+    app_state_fixture.licensing = {"type": "existing_license"}
+
+    # Act
+    result = await app_state_fixture._AppState__get_licensing_env_vars()
+
+    # Assert
+    assert result == {}

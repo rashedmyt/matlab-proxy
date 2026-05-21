@@ -1,4 +1,4 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 import datetime
 import os
@@ -393,7 +393,7 @@ def get_matlab_settings():
 
     matlab_version = get_matlab_version(matlab_root_path)
     matlab_version_determined_on_startup = bool(matlab_version)
-    matlab_cmd = _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str)
+    matlab_cmd = _get_matlab_cmd(matlab_executable_path, code_to_execute)
 
     return {
         "error": err,
@@ -669,25 +669,18 @@ def _get_mw_licensing_urls(ws_env_suffix):
     }
 
 
-def _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str):
+def _get_matlab_cmd(matlab_executable_path, code_to_execute):
     """Construct the MATLAB command with appropriate flags and arguments.
 
     Args:
         matlab_executable_path (str): The path to the MATLAB executable.
         code_to_execute (str): The MATLAB code to execute on startup.
-        nlm_conn_str (str): The Network License Manager connection string.
 
     Returns:
         list: A list of command-line arguments to launch MATLAB with the specified configuration.
     """
     if not matlab_executable_path:
         return None
-
-    matlab_lic_mode = ["-licmode", "file"] if nlm_conn_str else ""
-
-    if mwi_env.Experimental.get_licmode_override():
-        matlab_lic_mode = ["-licmode", mwi_env.Experimental.get_licmode_override()]
-        logger.info(f"Using MATLAB license mode arguments: {matlab_lic_mode}")
 
     # flag to hide MATLAB Window
     flag_to_hide_desktop = ["-nodesktop"]
@@ -703,7 +696,6 @@ def _get_matlab_cmd(matlab_executable_path, code_to_execute, nlm_conn_str):
         "-nosplash",
         *flag_to_hide_desktop,
         "-softwareopengl",
-        *matlab_lic_mode,
         "-externalUI",
         profile_matlab_startup,
         "-r",

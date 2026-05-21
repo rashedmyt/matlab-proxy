@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 import os
 import socket
@@ -8,10 +8,11 @@ import time
 from collections import namedtuple
 from pathlib import Path
 
-import pytest
 import aiohttp
-from matlab_proxy.util.mwi import environment_variables as mwi_env
+import pytest
+
 from matlab_proxy.constants import CONNECTOR_SECUREPORT_FILENAME
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 
 """
 This file consists of tests which check the devel.py file
@@ -130,8 +131,12 @@ def matlab_process_valid_nlm_fixture(matlab_log_dir, matlab_process_setup, valid
     fixture. After completion of tests stops the matlab process
     """
 
+    matlab_process_env = os.environ.copy()
+    matlab_process_env[mwi_env.get_env_name_matlab_log_dir()] = str(matlab_log_dir)
     matlab_process = subprocess.Popen(
-        matlab_process_setup.matlab_cmd, stderr=subprocess.PIPE
+        matlab_process_setup.matlab_cmd,
+        stderr=subprocess.PIPE,
+        env=matlab_process_env,
     )
 
     yield
@@ -191,9 +196,12 @@ def matlab_process_invalid_nlm_fixture(
         invalid_nlm : A pytest fixture which monkeypatches an invalid nlm connection string
     """
 
+    matlab_process_env = os.environ.copy()
+    matlab_process_env[mwi_env.get_env_name_matlab_log_dir()] = str(matlab_log_dir)
     matlab_process = subprocess.Popen(
         matlab_process_setup.matlab_cmd,
         stderr=subprocess.PIPE,
+        env=matlab_process_env,
     )
 
     yield

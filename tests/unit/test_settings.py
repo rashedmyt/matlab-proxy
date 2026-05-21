@@ -1,4 +1,4 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 import os
 import tempfile
@@ -505,27 +505,18 @@ def test_get_mw_licensing_urls(ws_env_suffix):
     assert all(ws_env_suffix in url for url in urls.values())
 
 
-@pytest.mark.parametrize("nlm_conn_str", [None, "1234@testserver"])
-def test_get_matlab_cmd_posix(nlm_conn_str, mocker):
+def test_get_matlab_cmd_posix(mocker):
     # Arrange
     matlab_executable_path = "/path/to/matlab"
     code_to_execute = "disp('Test')"
     mocker.patch("matlab_proxy.settings.system.is_windows", return_value=False)
 
     # Act
-    cmd = settings._get_matlab_cmd(
-        matlab_executable_path, code_to_execute, nlm_conn_str
-    )
+    cmd = settings._get_matlab_cmd(matlab_executable_path, code_to_execute)
 
     # Assert
     assert cmd[0] == matlab_executable_path
     assert "-noDisplayDesktop" not in cmd
-
-    if nlm_conn_str:
-        assert "-licmode" in cmd
-        assert "file" in cmd
-    else:
-        assert "-licmode" not in cmd
 
 
 def test_get_matlab_cmd_windows(mocker):
@@ -535,7 +526,7 @@ def test_get_matlab_cmd_windows(mocker):
     mocker.patch("matlab_proxy.settings.system.is_windows", return_value=True)
 
     # Act
-    cmd = settings._get_matlab_cmd(matlab_executable_path, code_to_execute, None)
+    cmd = settings._get_matlab_cmd(matlab_executable_path, code_to_execute)
 
     # Assert
     assert "-noDisplayDesktop" in cmd
@@ -556,7 +547,7 @@ def test_get_matlab_cmd_with_startup_profiling(mocker):
     code_to_execute = "disp('Test')"
 
     # Act
-    cmd = settings._get_matlab_cmd(matlab_executable_path, code_to_execute, None)
+    cmd = settings._get_matlab_cmd(matlab_executable_path, code_to_execute)
 
     # Assert
     assert "-timing" in cmd

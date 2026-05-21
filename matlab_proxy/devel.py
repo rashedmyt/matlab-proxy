@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 # Development specific functions
 import asyncio
@@ -267,6 +267,10 @@ if __name__ == "__main__":
     )
     matlab_parser = subparsers.add_parser("matlab")
     matlab_parser.add_argument("--ready-delay", default=2, type=int)
+    # Accept but ignore MATLAB license mode args (added by app_state when MLM_LICENSE_FILE is set)
+    matlab_parser.add_argument(
+        "-licmode", nargs="?", default=None, help=argparse.SUPPRESS
+    )
     matlab_parser.set_defaults(func=matlab)
     args = parser.parse_args()
     args.func(args)
