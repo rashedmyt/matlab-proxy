@@ -1,11 +1,10 @@
-# Copyright 2020-2024 The MathWorks, Inc.
-
-from typing import Dict, Set, Union
-from contextlib import suppress
+# Copyright 2020-2026 The MathWorks, Inc.
 
 import asyncio
+from contextlib import suppress
+from typing import Dict, Set, Union
 
-from matlab_proxy.util import mwi, system, windows
+from matlab_proxy.util import mwi
 
 logger = mwi.logger.get()
 
@@ -18,18 +17,19 @@ def get_event_loop():
         asyncio.loop: asyncio event loop.
     """
     try:
-        # Try to get an existing event loop.
-        # If there's no running event loop, raises RuntimeError.
-        loop = asyncio.get_running_loop()
+        return asyncio.get_running_loop()
     except RuntimeError:
-        # If execution reached this except block, it implies that there
-        # was no running event loop. So, create one.
-        if system.is_posix():
+        # No running event loop. Try to get a previously-set loop, or create a new one.
+        # In Python 3.14+, get_event_loop() raises RuntimeError if no loop was ever set.
+        try:
             loop = asyncio.get_event_loop()
-        else:
-            loop = windows.get_event_loop()
-
-    return loop
+            if loop.is_closed():
+                raise RuntimeError("Event loop is closed")
+            return loop
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop
 
 
 async def cancel_tasks(tasks: Union[Dict[str, asyncio.Task], Set[asyncio.Task]]):
@@ -49,7 +49,7 @@ async def cancel_tasks(tasks: Union[Dict[str, asyncio.Task], Set[asyncio.Task]])
         for task in tasks:
             if task:
                 await __cancel_task(task)
-                logger.debug(f"Task stopped successfully")
+                logger.debug("Task stopped successfully")
 
 
 async def __cancel_task(task):

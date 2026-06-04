@@ -1,4 +1,4 @@
-# Copyright 2022-2024 The MathWorks, Inc.
+# Copyright 2022-2026 The MathWorks, Inc.
 import asyncio
 
 from matlab_proxy import util
@@ -12,25 +12,6 @@ from matlab_proxy.util.mwi.exceptions import (
 """
 
 logger = mwi.logger.get()
-
-
-def get_event_loop():
-    """Return the same ProactorEventLoop regardless of the python version.
-    If there is no event loop running, will create a ProactorEventloop and set is as the
-    event loop for the current process.
-
-    Returns:
-        loop: asyncio loop of type ProactorEventLoop.
-    """
-    # Different python versions return different event loops with varying capabilities.
-    # Ex: Can't create a subprocesses if we use WindowsSelectorEventLoop for python < 3.7
-    loop = asyncio.get_event_loop()
-
-    if not isinstance(loop, asyncio.windows_events.ProactorEventLoop):
-        loop = asyncio.ProactorEventLoop()
-        asyncio.set_event_loop(loop)
-
-    return loop
 
 
 async def start_matlab(matlab_cmd, matlab_env):
