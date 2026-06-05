@@ -18,7 +18,7 @@ The following table describes all the environment variables that you can set to 
 | **MWI_BASE_URL** | string | `"/matlab"` | Set to control the base URL of the app. MWI_BASE_URL should start with `/` or be `empty`. |
 | **MWI_APP_PORT** | integer | `8080` | Specify the port for the HTTP server to listen on. |
 | **MWI_APP_HOST** | string | `127.0.0.1` | Specify the host address to display the connection URL in the startup message.|
-| **MWI_LOG_LEVEL** | string | `"CRITICAL"` | Specify the Python log level to be one of the following `NOTSET`, `DEBUG`, `INFO`, `WARN`, `ERROR`, or `CRITICAL`. For more information on Python log levels, see [Logging Levels](https://docs.python.org/3/library/logging.html#logging-levels) .<br />The default value is `INFO`. |
+| **MWI_LOG_LEVEL** | string | `"CRITICAL"` | Specify the log level. Valid options are: `NOTSET`, `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `CRITICAL`. In addition to the standard Python [Log Levels (Python Documentation)](https://docs.python.org/3/library/logging.html#logging-levels), `matlab-proxy` supports a custom `TRACE` level. Use `TRACE` when you require more granular diagnostic information than `DEBUG` mode provides.<br />The default value is `INFO`. |
 | **MWI_LOG_FILE** | string | `"/tmp/logs.txt"` | Specify the full path to the file where you want debug logs from this integration to be written. |
 | **MWI_ENABLE_WEB_LOGGING** | string | `"True"` | Set this value to `"True"` to see additional web server logs. |
 | **MWI_CUSTOM_HTTP_HEADERS** | string  |`'{"Content-Security-Policy": "frame-ancestors *.example.com:*"}'`<br /> OR <br />`"/path/to/your/custom/http-headers.json"` |Specify valid HTTP headers as JSON data in a string format. <br /> Alternatively, specify the full path to the JSON file containing valid HTTP headers instead. These headers are injected into the HTTP response sent to the browser. </br> For  more information, see the [Custom HTTP Headers](#custom-http-headers) section.|
@@ -182,6 +182,6 @@ Note: Restarting MATLAB from within `matlab-proxy` will run the specified code a
 
 ----
 
-Copyright 2020-2025 The MathWorks, Inc.
+Copyright 2020-2026 The MathWorks, Inc.
 
 ----

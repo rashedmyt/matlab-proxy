@@ -315,14 +315,14 @@ class TrackingLock:
         await self._lock.acquire()
         # Store the current task or function information when the lock is acquired
         self._acquired_by = get_caller_name()
-        logger.debug(f"Lock acquired by '{self.acquired_by}()'")
+        logger.trace(f"Lock acquired by '{self.acquired_by}()'")
 
     async def release(self):
         """Releases the lock."""
         if self.locked():
             # Clear the owner information when the lock is released
             self._lock.release()
-            logger.debug(f"Lock released by '{self.acquired_by}()'")
+            logger.trace(f"Lock released by '{self.acquired_by}()'")
             self._acquired_by = None
 
         else:

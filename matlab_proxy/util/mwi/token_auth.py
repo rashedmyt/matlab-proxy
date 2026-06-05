@@ -1,4 +1,4 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 # This file contains functions required to enable token based authentication in the server.
 
@@ -79,17 +79,17 @@ async def authenticate_request(request):
     Returns True when authentication is disabled.
     """
 
-    logger.debug(f"<======== Authenticate request: {request}")
+    logger.trace(f"<======== Authenticate request: {request}")
 
     if _is_mwi_token_auth_enabled(request):
-        logger.debug("Authentication is Enabled.")
+        logger.trace("Authentication is Enabled.")
         is_authenticated = (
             await _is_valid_token_in_session_cookie(request)
             or await _is_valid_token_in_headers(request)
             or await _is_valid_token_in_url_query(request)
         )
         if is_authenticated:
-            logger.debug("Authentication successful. ========>")
+            logger.trace("Authentication successful. ========>")
         else:
             logger.error("Token Authentication failed. ========>")
 
@@ -184,7 +184,7 @@ async def _store_token_hash_into_session(request):
 
     # Stash token hash in session for other endpoints
     session[await _get_token_name(request)] = await _get_token_hash(request)
-    logger.debug(f"Created session and saved cookie.")
+    logger.trace(f"Created session and saved cookie.")
 
 
 def _is_mwi_token_auth_enabled(request):
@@ -212,7 +212,7 @@ async def _is_valid_token(token, request):
     is_valid = compare_digest(token, await _get_token_hash(request)) or compare_digest(
         token, await _get_token(request)
     )
-    logger.debug("Token validation " + ("successful." if is_valid else "failed."))
+    logger.trace("Token validation " + ("successful." if is_valid else "failed."))
     return is_valid
 
 
@@ -225,16 +225,16 @@ async def _is_valid_token_in_session_cookie(request):
     Returns:
         Boolean : True if valid token is found
     """
-    logger.debug("Checking for token in session cookie...")
+    logger.trace("Checking for token in session cookie...")
     session = await get_session(request)
-    logger.debug(f"Got session cookie.")
+    logger.trace(f"Got session cookie.")
     token_name = await _get_token_name(request)
     if token_name in session:
         stored_session_token = session[token_name]
-        logger.debug(f"Found token in session cookie, validating...")
+        logger.trace(f"Found token in session cookie, validating...")
         return await _is_valid_token(stored_session_token, request)
 
-    logger.debug("Token not found in session cookie.")
+    logger.trace("Token not found in session cookie.")
     return False
 
 
@@ -247,18 +247,18 @@ async def _is_valid_token_in_url_query(request):
     Returns:
         Boolean : True if valid token is found
     """
-    logger.debug("Checking for token in url query...")
+    logger.trace("Checking for token in url query...")
     query_string = request.query_string
-    logger.debug(f"url query parameters found:{query_string}")
+    logger.trace(f"url query parameters found:{query_string}")
     if query_string:
         token_name = _get_token_name_for_http(request)
         parsed_token = parse_qs(request.query_string).get(token_name)
         if parsed_token:
             parsed_token = parsed_token[0]
-            logger.debug("parsed_token from url query string.")
+            logger.trace("parsed_token from url query string.")
             return await _is_valid_token(parsed_token, request)
 
-    logger.debug("Token not found in url query.")
+    logger.trace("Token not found in url query.")
     return False
 
 
@@ -273,17 +273,17 @@ async def _is_valid_token_in_headers(request):
     Returns:
         Boolean : True if valid token is found
     """
-    logger.debug("Checking for token in request headers...")
+    logger.trace("Checking for token in request headers...")
     headers = request.headers
     token_name = _get_token_name_for_http(request)
     if token_name in headers:
-        logger.debug(f"Token found in headers: {token_name}")
+        logger.trace(f"Token found in headers: {token_name}")
         is_valid_token = await _is_valid_token(headers[token_name], request)
         if is_valid_token:
             await _store_token_hash_into_session(request)
         return is_valid_token
 
-    logger.debug("Token not found in request headers.")
+    logger.trace("Token not found in request headers.")
     return False
 
 

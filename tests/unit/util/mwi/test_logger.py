@@ -1,4 +1,4 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 """This file tests methods present in matlab_proxy/util/mwi_logger.py"""
 
 import logging
@@ -19,6 +19,7 @@ def test_get():
     logger = mwi_logger.get()
     # Okay to use hidden API for testing only.
     assert logger.name == mwi_logger.__get_mw_logger_name()
+    assert hasattr(logger, "trace"), "Logger returned by get() should support trace()"
 
 
 def test_get_mw_logger_name():
@@ -58,9 +59,11 @@ def test_get_with_environment_variables(monkeypatch, tmp_path, reset_logger_hand
 @pytest.mark.parametrize(
     "log_level, expected_level",
     [
+        ("TRACE", mwi_logger.TRACE),
         ("DEBUG", logging.DEBUG),
         ("INFO", logging.INFO),
         ("WARNING", logging.WARNING),
+        ("trace", mwi_logger.TRACE),
         ("debug", logging.DEBUG),
         ("info", logging.INFO),
         ("warning", logging.WARNING),
@@ -89,3 +92,34 @@ def test_set_logging_configuration_unknown_logging_levels(
     assert (
         logger.isEnabledFor(logging.INFO) == True
     ), "Error in initialising the default logger"
+
+
+def test_logger_has_trace_method(reset_logger_handlers):
+    """This test checks that the logger returned by get() has a trace() method"""
+    logger = mwi_logger.get(init=True)
+    assert hasattr(logger, "trace"), "Logger should have trace() method"
+
+
+def test_get_returns_custom_logger_instance(reset_logger_handlers):
+    """This test checks that get() returns the custom logger implementation."""
+    logger = mwi_logger.get(init=True)
+    assert isinstance(logger, mwi_logger.MwLogger)
+
+
+def test_trace_level_name_is_registered(reset_logger_handlers):
+    """This test checks that TRACE level has a registered logging name."""
+    mwi_logger.get()
+    assert logging.getLevelName(mwi_logger.TRACE) == "TRACE"
+
+
+def test_trace_logging_at_trace_level(monkeypatch, reset_logger_handlers, caplog):
+    """This test checks that trace() method logs at TRACE level when enabled"""
+    env_names_list = mwi_logger.get_environment_variable_names()
+    monkeypatch.setenv(env_names_list[0], "TRACE")
+
+    with caplog.at_level(mwi_logger.TRACE):
+        logger = mwi_logger.get(init=True)
+        logger.trace("Test trace message")
+
+    assert "Test trace message" in caplog.text
+    assert caplog.records[0].levelname == "TRACE"

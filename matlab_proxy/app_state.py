@@ -995,7 +995,7 @@ class AppState:
         )
 
         # Env setup related to logging
-        # Very verbose logging in debug mode
+        # Very verbose logging in debug or trace mode (trace is lower level than debug, so the below condition will also be true for trace level)
         if logger.isEnabledFor(logging.getLevelName("DEBUG")):
             mwi_log_file = self.settings.get("mwi_log_file", None)
             # If a log file is supplied to write matlab-proxy server logs,
@@ -1017,8 +1017,12 @@ class AppState:
             logger.info(
                 f"Writing MATLAB process logs to: {matlab_env['MW_DIAGNOSTIC_DEST']}"
             )
+
+        if logger.isEnabledFor(logging.getLevelName("TRACE")):
+            trace_spec = ".*=fatal,critical,error,warning;connector::worker.*=all;connector::container::http=all;connector::lifecycle=all;connector::http::server=all"
+            existing_spec = matlab_env.get("MW_DIAGNOSTIC_SPEC", "")
             matlab_env["MW_DIAGNOSTIC_SPEC"] = (
-                "connector::http::server=all;connector::lifecycle=all"
+                f"{existing_spec};{trace_spec}" if existing_spec else trace_spec
             )
 
         # TODO Introduce a warmup flag to enable this?

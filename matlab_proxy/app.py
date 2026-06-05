@@ -589,7 +589,7 @@ async def matlab_view(req):
     # If we are trying to send request to matlab while the matlab_port is still not assigned
     # by embedded connector, return service not available and log a message
     if not matlab_port:
-        logger.debug(
+        logger.trace(
             "MATLAB hasn't fully started, please retry after embedded connector has started"
         )
         raise web.HTTPServiceUnavailable()
@@ -742,7 +742,7 @@ async def matlab_view(req):
                 client_exceptions.ServerDisconnectedError,
                 client_exceptions.ClientConnectionError,
             ):
-                logger.debug(
+                logger.trace(
                     "Failed to forward HTTP request as MATLAB process may not be running."
                 )
                 raise web.HTTPServiceUnavailable()

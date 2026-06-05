@@ -1,4 +1,4 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 """Functions to access & control the logging behavior of the app"""
 
 import logging
@@ -12,15 +12,54 @@ from rich.table import Table
 
 from . import environment_variables as mwi_env
 
-logging.getLogger("aiohttp_session").setLevel(logging.ERROR)
+# Define TRACE level (more detailed than DEBUG)
+TRACE = 5
+
+
+class MwLogger(logging.Logger):
+    """Custom logger that adds TRACE level support (more detailed than DEBUG).
+
+    This logger class extends the standard Python logging.Logger to provide
+    an additional TRACE log level for ultra-detailed debugging that is more
+    granular than DEBUG.
+
+    Usage:
+        logger = mwi.logger.get()
+        logger.trace("Ultra-detailed trace: %s", data)
+    """
+
+    def trace(self, msg, *args, **kwargs):
+        """
+        Log a message at TRACE level.
+
+        TRACE level is more detailed than DEBUG and is intended for
+        ultra-detailed tracing information that is typically only needed
+        during deep debugging sessions.
+
+        Args:
+            msg: The message format string
+            *args: Arguments to merge into msg using string formatting
+            **kwargs: Additional keyword arguments passed to Logger.log()
+        """
+        self.log(TRACE, msg, *args, **kwargs)
+
+
+def _setup_logging_system():
+    """Initialize the custom logging system."""
+    logging.addLevelName(TRACE, "TRACE")
+    logging.setLoggerClass(MwLogger)
+    logging.getLogger("aiohttp_session").setLevel(logging.ERROR)
 
 
 def get(init=False):
     """Get the logger used by this application.
         Set init=True to initialize the logger
     Returns:
-        Logger: The logger used by this application.
+        MwLogger: The logger used by this application.
     """
+    # Always ensure logging system is set up first (registers MwLogger class)
+    _setup_logging_system()
+
     if init is True:
         return __set_logging_configuration()
 
@@ -40,7 +79,7 @@ def __get_mw_logger():
     """Returns logger for use in this app.
 
     Returns:
-        Logger: A logger object
+        MwLogger: A logger object with TRACE level support.
     """
     return logging.getLogger(__get_mw_logger_name())
 
@@ -49,9 +88,12 @@ def __set_logging_configuration():
     """Sets the logging environment for the app
 
     Returns:
-        Logger: Logger object with the set configuration.
+        MwLogger: Logger object with the set configuration.
     """
-    # Create the Logger for MATLABProxy
+    # Ensure the logging system is set up before creating the logger
+    _setup_logging_system()
+
+    # Create the Logger for MATLABProxy (will be MwLogger due to setLoggerClass)
     logger = __get_mw_logger()
 
     # log_level is either set by environment or is the default value.
@@ -142,7 +184,8 @@ def __is_invalid_log_level(log_level):
         Boolean: Whether log level  exists
     """
 
-    return not hasattr(logging, log_level)
+    # Check standard Python levels OR our custom TRACE level
+    return not (hasattr(logging, log_level) or log_level == "TRACE")
 
 
 def log_startup_info(title=None, matlab_urls=[]):
@@ -183,11 +226,14 @@ class _ColoredFormatter(logging.Formatter):
 
     def format(self, record):
         # Example: Add 'color' and 'end_color' attributes based on log level
-        if record.levelno == logging.INFO:
-            record.color = "\033[32m"  # Green
+        if record.levelno == TRACE:
+            record.color = "\033[36m"  # Cyan (light blue)
             record.end_color = "\033[0m"
         elif record.levelno == logging.DEBUG:
             record.color = "\033[94m"  # Blue
+            record.end_color = "\033[0m"
+        elif record.levelno == logging.INFO:
+            record.color = "\033[32m"  # Green
             record.end_color = "\033[0m"
         elif record.levelno == logging.WARNING:
             record.color = "\033[93m"  # Yellow
