@@ -1,4 +1,4 @@
-# Copyright 2020-2024 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 import asyncio
 import os
@@ -6,9 +6,11 @@ import select
 import xml.etree.ElementTree as ET
 
 import aiohttp
+
 from matlab_proxy.default_configuration import config
-from matlab_proxy.util import mwi
 from matlab_proxy.settings import get_process_startup_timeout
+from matlab_proxy.util import mwi
+from matlab_proxy.util.mwi import environment_variables as mwi_env
 from matlab_proxy.util.mwi.exceptions import (
     EntitlementError,
     MatlabError,
@@ -146,6 +148,14 @@ async def fetch_access_token(mwa_api_endpoint, identity_token, source_id):
     Returns:
         Dict : Containing the Access token.
     """
+    # MWAJ -> Long-running session (90 days), MWAS -> Short-running session (24 hours)
+    # It comes with the security risk of being stolen and used by an attacker for an extended period.
+    # Hence, it is recommended to use MWAJ only when necessary.
+    access_token_type = (
+        "MWAJ" if mwi_env.Experimental.is_long_running_session_enabled() else "MWAS"
+    )
+    logger.debug(f"Requesting access token of type: {access_token_type}")
+
     async with aiohttp.ClientSession(trust_env=True) as client_session:
         async with client_session.post(
             f"{mwa_api_endpoint}/tokens/access",
@@ -157,7 +167,7 @@ async def fetch_access_token(mwa_api_endpoint, identity_token, source_id):
             data=aiohttp.FormData(
                 {
                     "tokenString": identity_token,
-                    "type": "MWAS",
+                    "type": access_token_type,
                     "sourceId": source_id,
                 }
             ),

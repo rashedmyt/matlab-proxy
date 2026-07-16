@@ -1,6 +1,7 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 
 import datetime
+import os
 import random
 import re
 import secrets
@@ -9,6 +10,7 @@ from datetime import timedelta, timezone
 from http import HTTPStatus
 
 import pytest
+
 from matlab_proxy import settings
 from matlab_proxy.util import mw, system
 from matlab_proxy.util.mwi import exceptions
@@ -169,6 +171,57 @@ async def test_fetch_access_token(mwa_api_data, fetch_access_token_valid_json, m
 
     assert re.match(url_pattern, url)
     assert json_data["accessTokenString"] == res["token"]
+
+
+async def test_fetch_access_token_uses_mwas_by_default(
+    mwa_api_data, fetch_access_token_valid_json, mocker
+):
+    """Test that fetch_access_token requests MWAS token type by default."""
+    json_data = fetch_access_token_valid_json
+    payload = dict(accessTokenString=json_data["accessTokenString"])
+    mock_resp = MockResponse(payload=payload, ok=True)
+
+    mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
+    mocker.patch.dict(os.environ, {}, clear=False)
+    os.environ.pop("MWI_ENABLE_LONG_RUNNING_SESSION", None)
+
+    await mw.fetch_access_token(
+        mwa_api_data.mwa_api_endpoint,
+        mwa_api_data.identity_token,
+        mwa_api_data.source_id,
+    )
+
+    _, _, kwargs = mocked.mock_calls[0]
+    form_data = kwargs["data"]
+    type_field = form_data._fields[1]
+    assert type_field[0]["name"] == "type"
+    assert type_field[2] == "MWAS"
+
+
+async def test_fetch_access_token_uses_mwaj_when_long_running_session_enabled(
+    mwa_api_data, fetch_access_token_valid_json, mocker
+):
+    """Test that fetch_access_token requests MWAJ token type when long-running session is enabled."""
+    json_data = fetch_access_token_valid_json
+    payload = dict(accessTokenString=json_data["accessTokenString"])
+    mock_resp = MockResponse(payload=payload, ok=True)
+
+    mocked = mocker.patch("aiohttp.ClientSession.post", return_value=mock_resp)
+    mocker.patch.dict(
+        os.environ, {"MWI_ENABLE_LONG_RUNNING_SESSION": "True"}, clear=False
+    )
+
+    await mw.fetch_access_token(
+        mwa_api_data.mwa_api_endpoint,
+        mwa_api_data.identity_token,
+        mwa_api_data.source_id,
+    )
+
+    _, _, kwargs = mocked.mock_calls[0]
+    form_data = kwargs["data"]
+    type_field = form_data._fields[1]
+    assert type_field[0]["name"] == "type"
+    assert type_field[2] == "MWAJ"
 
 
 async def test_fetch_access_token_licensing_error(mwa_api_data, mocker):

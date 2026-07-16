@@ -1,4 +1,4 @@
-# Copyright 2020-2025 The MathWorks, Inc.
+# Copyright 2020-2026 The MathWorks, Inc.
 """This file lists and exposes the environment variables which are used by the integration."""
 
 import os
@@ -228,3 +228,15 @@ class Experimental:
     def get_licmode_override():
         """Returns the licmode oveerride if set"""
         return os.environ.get("MWI_LICMODE_OVERRIDE", None)
+
+    @staticmethod
+    def get_env_name_enable_long_running_session():
+        """Returns the environment variable name used to enable long-running session support"""
+        return "MWI_ENABLE_LONG_RUNNING_SESSION"
+
+    @staticmethod
+    def is_long_running_session_enabled():
+        """Returns true if long-running session support is enabled."""
+        return _is_env_set_to_true(
+            Experimental.get_env_name_enable_long_running_session()
+        )
