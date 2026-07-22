@@ -1,4 +1,4 @@
-// Copyright 2020-2025 The MathWorks, Inc.
+// Copyright 2020-2026 The MathWorks, Inc.
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -125,7 +125,7 @@ function App() {
     // BUFFER timer which runs for a BUFFER_TIMER_DURATION more seconds once the IDLE timer has expired to allow the ShutdownWarning
     // dialog box to appear on the screen, such that the user is informed of an impending termination.
     const [, bufferTimerCancel, bufferTimerReset] = useTimeoutFn(() => {
-        dispatch(fetchShutdownIntegration());
+        dispatch(fetchShutdownIntegration({ reason: 'IDLE_TIMEOUT' }));
         setBufferTimerHasExpired(true);
     }, BUFFER_TIMEOUT_DURATION * 1000);
 

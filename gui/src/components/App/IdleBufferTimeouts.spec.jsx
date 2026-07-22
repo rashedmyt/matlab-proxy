@@ -1,7 +1,7 @@
-// Copyright 2024-2025 The MathWorks, Inc.
+// Copyright 2024-2026 The MathWorks, Inc.
 
 // File to test IDLE and BUFFER timeouts.
-// Need a seperate file for mocking BUFFER_TIMEOUT_DURATION before App component is imported for testing.
+// Need a separate file for mocking BUFFER_TIMEOUT_DURATION before App component is imported for testing.
 
 import React from 'react';
 
@@ -73,7 +73,7 @@ describe('Timeouts in App Component', () => {
         });
 
         // Mock fetchShutdownIntegration response
-        fetchMock.deleteOnce('/shutdown_integration', {
+        fetchMock.deleteOnce('/shutdown_integration?reason=IDLE_TIMEOUT', {
             body: createStatusResponse,
             headers: { 'content-type': 'application/json' }
         });
@@ -84,7 +84,7 @@ describe('Timeouts in App Component', () => {
 
         await waitFor(() => {
             expect(fetchMock.called('get_status')).toBe(true);
-            expect(fetchMock.called('shutdown_integration')).toBe(true);
+            expect(fetchMock.called('shutdown_integration?reason=IDLE_TIMEOUT')).toBe(true);
         }, { timeout: initialState.idleTimeoutDuration * 1000 + mockBufferTimeoutDuration * 1000 + additionalTimeForFetchMock * 1000 });
     });
 

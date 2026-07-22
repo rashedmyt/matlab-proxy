@@ -19,6 +19,7 @@ from matlab_proxy.constants import (
     IS_CONCURRENCY_CHECK_ENABLED,
     MATLAB_LOGS_FILE_NAME,
     USER_CODE_OUTPUT_FILE_NAME,
+    ExitReason,
 )
 from matlab_proxy.settings import get_process_startup_timeout
 from matlab_proxy.util import mw, mwi, system, windows
@@ -154,6 +155,7 @@ class AppState:
 
         # Flag to track if matlab-proxy is in the process of shutting down
         self.is_shutting_down: bool = False
+        self.exit_reason: ExitReason = ExitReason.NORMAL_SHUTDOWN
 
     def set_remaining_idle_timeout(self, new_timeout):
         """Sets the remaining IDLE timeout after the validating checks.
@@ -220,6 +222,7 @@ class AppState:
 
         logger.info("The IDLE timer for shutdown has run out...")
         logger.info(f"Shutting down {self.settings['integration_name']}")
+        self.exit_reason = ExitReason.IDLE_TIMEOUT
         await self.stop_matlab()
         loop = util.get_event_loop()
         loop.stop()
@@ -1377,7 +1380,6 @@ class AppState:
             await self.__start_window_manager(display)
 
         try:
-
             # Prepare ready file for the MATLAB process.
             self.create_logs_dir_for_MATLAB()
 

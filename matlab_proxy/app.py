@@ -16,7 +16,7 @@ from cryptography import fernet
 import matlab_proxy
 from matlab_proxy import constants, settings, util
 from matlab_proxy.app_state import AppState
-from matlab_proxy.constants import IS_CONCURRENCY_CHECK_ENABLED
+from matlab_proxy.constants import IS_CONCURRENCY_CHECK_ENABLED, ExitReason
 from matlab_proxy.util import mwi
 from matlab_proxy.util.mwi import download, token_auth
 from matlab_proxy.util.mwi import environment_variables as mwi_env
@@ -444,6 +444,11 @@ async def shutdown_integration_delete(req):
 
     logger.info(f"Shutting down {state.settings['integration_name']}...")
     state.is_shutting_down = True
+
+    try:
+        state.exit_reason = ExitReason[req.query.get("reason", "").upper()]
+    except KeyError:
+        pass
     res = create_status_response(req.app, "../")
 
     # Schedule the shutdown to happen after the response is sent
@@ -1008,41 +1013,56 @@ def create_and_start_app(config_name):
     Args:
         config_name (str): Name of the configuration to use with matlab-proxy.
     """
-    util.system.configure_no_proxy_in_env(logger)
+    exit_code = int(ExitReason.UNEXPECTED_ERROR)
 
-    # Create, configure and start the app.
-    app = create_app(config_name)
-    app = configure_and_start(app)
-
-    loop = util.get_event_loop()
-
-    # Add signal handlers for the current python process
-    loop = util.add_signal_handlers(loop)
     try:
-        # Further execution is stopped here until an interrupt is raised
-        loop.run_forever()
+        util.system.configure_no_proxy_in_env(logger)
+
+        # Create, configure and start the app.
+        app = create_app(config_name)
+        app = configure_and_start(app)
+
+        loop = util.get_event_loop()
+
+        # Add signal handlers for the current python process
+        loop = util.add_signal_handlers(loop)
+        try:
+            # Further execution is stopped here until an interrupt is raised
+            loop.run_forever()
+
+        except SystemExit:
+            pass
+
+        # After handling the interrupt, proceed with shutting down the server gracefully.
+        try:
+            # aiohttp shutdown to be invoked before cleanup -
+            # https://docs.aiohttp.org/en/stable/web_reference.html#aiohttp.web.Application.shutdown
+            loop.run_until_complete(app.shutdown())
+            loop.run_until_complete(app.cleanup())
+
+            running_tasks = asyncio.all_tasks(loop)
+
+            # Gracefully cancel all running background tasks
+            loop.run_until_complete(util.cancel_tasks(running_tasks))
+
+        except Exception:
+            pass
+
+        state = app["state"]
+        logger.info(
+            f"Finished shutting down (reason: {state.exit_reason.name}, "
+            f"code: {int(state.exit_reason)}). Thank you for using the MATLAB proxy."
+        )
+        loop.close()
+        exit_code = int(state.exit_reason)
 
     except SystemExit:
-        pass
-
-    # After handling the interrupt, proceed with shutting down the server gracefully.
-    try:
-        # aiohttp shutdown to be invoked before cleanup -
-        # https://docs.aiohttp.org/en/stable/web_reference.html#aiohttp.web.Application.shutdown
-        loop.run_until_complete(app.shutdown())
-        loop.run_until_complete(app.cleanup())
-
-        running_tasks = asyncio.all_tasks(loop)
-
-        # Gracefully cancel all running background tasks
-        loop.run_until_complete(util.cancel_tasks(running_tasks))
+        logger.exception("Unexpected SystemExit raised during execution.")
 
     except Exception:
-        pass
+        logger.exception("Unexpected error caused shutdown.")
 
-    logger.info("Finished shutting down. Thank you for using the MATLAB proxy.")
-    loop.close()
-    sys.exit(0)
+    sys.exit(exit_code)
 
 
 def print_version_and_exit():

@@ -1,4 +1,5 @@
 # Copyright 2023-2026 The MathWorks, Inc.
+from enum import IntEnum
 from typing import Final, List
 
 """This module defines project-level constants"""
@@ -36,3 +37,16 @@ MWI_AUTH_TOKEN_NAME_FOR_HTTP = "mwi-auth-token"
 
 # Interval in seconds to wait before querying the status of MATLAB.
 CHECK_MATLAB_STATUS_INTERVAL_SECONDS: Final[int] = 1
+
+
+class ExitReason(IntEnum):
+    """Exit reasons for matlab-proxy with distinct exit codes.
+
+    Codes 100+ are application-defined to avoid collision with standard Unix exit codes.
+    Code 0 is retained for normal signal-based shutdown.
+    Code 1 is used for unexpected errors to distinguish from intentional application exits.
+    """
+
+    NORMAL_SHUTDOWN = 0
+    UNEXPECTED_ERROR = 1
+    IDLE_TIMEOUT = 100

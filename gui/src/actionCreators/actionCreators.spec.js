@@ -1,4 +1,4 @@
-// Copyright 2020-2025 The MathWorks, Inc.
+// Copyright 2020-2026 The MathWorks, Inc.
 
 import configureMockStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
@@ -450,6 +450,55 @@ describe('Test Async actionCreators', () => {
             expect(receivedActions.map((action) => action.type)).toEqual(
                 expectedActionTypes
             );
+        });
+    });
+
+    it('should dispatch REQUEST_SHUTDOWN_INTEGRATION and RECEIVE_SHUTDOWN_INTEGRATION when shutting down without a reason', () => {
+        fetchMock.deleteOnce('./shutdown_integration', {
+            body: {
+                matlab: {
+                    status: 'down'
+                },
+                licensing: null
+            },
+            headers: { 'content-type': 'application/json' }
+        });
+
+        const expectedActionTypes = [
+            actions.REQUEST_SHUTDOWN_INTEGRATION,
+            actions.RECEIVE_SHUTDOWN_INTEGRATION
+        ];
+
+        return store.dispatch(actionCreators.fetchShutdownIntegration()).then(() => {
+            const receivedActions = store.getActions();
+            expect(receivedActions.map((action) => action.type)).toEqual(
+                expectedActionTypes
+            );
+        });
+    });
+
+    it('should dispatch REQUEST_SHUTDOWN_INTEGRATION and RECEIVE_SHUTDOWN_INTEGRATION with reason query param when reason is provided', () => {
+        fetchMock.deleteOnce('./shutdown_integration?reason=IDLE_TIMEOUT', {
+            body: {
+                matlab: {
+                    status: 'down'
+                },
+                licensing: null
+            },
+            headers: { 'content-type': 'application/json' }
+        });
+
+        const expectedActionTypes = [
+            actions.REQUEST_SHUTDOWN_INTEGRATION,
+            actions.RECEIVE_SHUTDOWN_INTEGRATION
+        ];
+
+        return store.dispatch(actionCreators.fetchShutdownIntegration({ reason: 'IDLE_TIMEOUT' })).then(() => {
+            const receivedActions = store.getActions();
+            expect(receivedActions.map((action) => action.type)).toEqual(
+                expectedActionTypes
+            );
+            expect(fetchMock.lastUrl()).toBe('/shutdown_integration?reason=IDLE_TIMEOUT');
         });
     });
 });

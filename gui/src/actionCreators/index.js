@@ -1,4 +1,4 @@
-// Copyright 2020-2025 The MathWorks, Inc.
+// Copyright 2020-2026 The MathWorks, Inc.
 
 import {
     SET_TRIGGER_POSITION,
@@ -374,7 +374,7 @@ export function fetchUnsetLicensing () {
     };
 }
 
-export function fetchShutdownIntegration () {
+export function fetchShutdownIntegration ({ reason } = {}) {
     return async function (dispatch) {
         const options = {
             method: 'DELETE',
@@ -383,8 +383,12 @@ export function fetchShutdownIntegration () {
             credentials: 'same-origin'
         };
 
+        const url = reason
+            ? `./shutdown_integration?reason=${encodeURIComponent(reason)}`
+            : './shutdown_integration';
+
         dispatch(requestShutdownIntegration());
-        const response = await fetchWithTimeout(dispatch, './shutdown_integration', options, 15000);
+        const response = await fetchWithTimeout(dispatch, url, options, 15000);
         const data = await response.json();
         dispatch(receiveShutdownIntegration(data));
     };
