@@ -1,9 +1,9 @@
-// Copyright 2020-2025 The MathWorks, Inc.
+// Copyright 2020-2026 The MathWorks, Inc.
 
 import React, { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector, useDispatch } from 'react-redux';
-import Linkify from 'react-linkify';
+import Linkify from 'linkify-react';
 import {
     selectLicensingInfo,
     selectError,
@@ -97,11 +97,9 @@ function Information ({
         )
         : null;
 
-    const linkDecorator = (href, text, key) => (
-        <a href={href} key={key} target="_blank" rel="noopener noreferrer">
-            {text}
-        </a>
-    );
+    const linkifyOptions = {
+        attributes: { target: '_blank', rel: 'noopener noreferrer' }
+    };
 
     const warningsNode = (warnings && warnings.length > 0)
         ? (
@@ -119,7 +117,7 @@ function Information ({
                         ? 'expanded'
                         : 'collapsed'}`}
                     aria-expanded={warningsExpanded}>
-                    <Linkify componentDecorator={linkDecorator}>
+                    <Linkify options={linkifyOptions}>
                         <div className="warnings-msg">{warnings.map((warning, index) => (index + 1).toString() + ')' + warning.trim()).join('\n\n')}</div>
                     </Linkify>
                 </div>

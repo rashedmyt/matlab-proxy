@@ -15,10 +15,11 @@
   "dependencies": {
     "cross-fetch": "^3.0.6",
     "crypto-js": "^4.2.0",
+    "linkify-react": "^4.3.2",
+    "linkifyjs": "^4.3.2",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-draggable": "^4.4.3",
-    "react-linkify": "^1.0.0-alpha",
     "react-redux": "^7.2.1",
     "react-tooltip": "^5.28.0",
     "react-use": "^17.6.1",

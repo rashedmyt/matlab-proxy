@@ -527,7 +527,7 @@ def make_static_route_table(app):
     Returns:
         Dict: Containing information about the static files and header information.
     """
-    import importlib.resources as resources
+    from importlib import resources
 
     from matlab_proxy import gui
     from matlab_proxy.gui import static
@@ -706,7 +706,7 @@ async def matlab_view(req):
                 async with client_session.request(
                     req.method,
                     req_url,
-                    headers={**reqH, **{"mwapikey": mwapikey}},
+                    headers={**reqH, "mwapikey": mwapikey},
                     allow_redirects=False,
                     data=req_body,
                     params=None,

@@ -1,8 +1,8 @@
-// Copyright 2020-2025 The MathWorks, Inc.
+// Copyright 2020-2026 The MathWorks, Inc.
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import Linkify from 'react-linkify';
+import Linkify from 'linkify-react';
 import './Error.css';
 
 function Error ({ message, logs, children }) {
